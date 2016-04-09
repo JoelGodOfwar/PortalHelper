@@ -1,0 +1,5 @@
+# change to false to stop auto-update-check
+auto-update-check: default
+debug: default
+portallevel: default
+enforceportallevel: default
