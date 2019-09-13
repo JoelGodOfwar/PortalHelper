@@ -26,10 +26,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import org.mcstats.MetricsLite;
 
+import com.github.joelgodofwar.ph.api.Ansi;
 import com.github.joelgodofwar.ph.api.ConfigAPI;
 import com.github.joelgodofwar.ph.api.NetherPortalFinder;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
@@ -55,11 +57,26 @@ public class Main extends JavaPlugin implements Listener{
 	
 	@Override // TODO:
 	public void onEnable(){
-		ConfigAPI.CheckForConfig(this);
 		PluginDescriptionFile pdfFile = this.getDescription();
-		logger.info("**************************************************************");
-		logger.info(pdfFile.getName() + " version " + pdfFile.getVersion() + " Has been enabled");
-		logger.info("**************************************************************");
+		String[] serverversion;
+		serverversion = getVersion().split("\\.");
+		if(debug){debuglog("getVersion = " + getVersion());}
+		if(debug){debuglog("serverversion = " + serverversion.length);}
+		for (int i = 0; i < serverversion.length; i++)
+            log(serverversion[i] + " i=" + i);
+		if (!(Integer.parseInt(serverversion[1]) >= 9)&&!(Integer.parseInt(serverversion[1]) < 13)){
+			
+		//if(!getVersion().contains("1.9")&&!getVersion().contains("1.10")&&!getVersion().contains("1.11")){
+			logger.info(ANSI_RED + "WARNING!" + ANSI_GREEN + "*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!" + ANSI_RESET);
+			logger.info(ANSI_RED + "WARNING! " + ANSI_YELLOW + "Server is NOT version 1.9.*+ or under version 1.13" + ANSI_RESET);
+			logger.info(ANSI_RED + "WARNING! " + ANSI_YELLOW + pdfFile.getName() + " v" + pdfFile.getVersion() + " disabling." + ANSI_RESET);
+			logger.info(ANSI_RED + "WARNING!" + ANSI_GREEN + "*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!" + ANSI_RESET);
+			Bukkit.getPluginManager().disablePlugin(this);
+			return;
+		}
+		
+		ConfigAPI.CheckForConfig(this);
+		consoleInfo("enabled");
 		getServer().getPluginManager().registerEvents(this, this);
 		
 		String varCheck = getConfig().getString("auto-update-check");
@@ -76,6 +93,13 @@ public class Main extends JavaPlugin implements Listener{
 		saveConfig();
 		ConfigAPI.Reloadconfig(this);
 		
+		/** DEV check **/
+		File jarfile = this.getFile().getAbsoluteFile();
+		if(jarfile.toString().contains("-DEV")){
+			debug = true;
+			log("jarfile contains dev, debug set to true.");
+		}
+		
 		try {
 			MetricsLite metrics = new MetricsLite(this);
 			metrics.start();
@@ -86,14 +110,23 @@ public class Main extends JavaPlugin implements Listener{
 	
 	@Override // TODO:
 	public void onDisable(){
-		PluginDescriptionFile pdfFile = this.getDescription();
-		logger.info("**************************************************************");
-		logger.info(pdfFile.getName() + " version " + pdfFile.getVersion() + " Has been disabled");
-		logger.info("**************************************************************");
+		consoleInfo("disabled");
 	}
 	
-	public static  void log(String dalog){
-		Bukkit.getLogger().info(dalog);
+	public void consoleInfo(String state) {
+		PluginDescriptionFile pdfFile = this.getDescription();
+		logger.info(Ansi.YELLOW + "**************************************" + Ansi.SANE);
+		logger.info(Ansi.MAGENTA + pdfFile.getName() + Ansi.GREEN + " v" + pdfFile.getVersion() + Ansi.SANE + " is " + state);
+		logger.info(Ansi.YELLOW + "**************************************" + Ansi.SANE);
+	}
+	
+	public  void debuglog(String dalog){
+		log(Ansi.RED + "[DEBUG]" + Ansi.SANE + dalog);
+	}
+	
+	
+	public  void log(String dalog){
+		Bukkit.getLogger().info(Ansi.MAGENTA + this.getName() + " " + Ansi.SANE  + dalog);
 	}
 	
 	public void PortalListener(Plugin plugin){
@@ -117,6 +150,10 @@ public class Main extends JavaPlugin implements Listener{
 		     
 			        if(block.getType().equals(Material.OBSIDIAN)){
 			         
+			        	if (!player.hasPermission("portalhelper.rightclick") && !player.isOp()) {
+		                    //player.sendMessage(ChatColor.DARK_RED + "You do not have permission for this command!");
+		                    return;
+		                }
 			        	/**List<World> worlds = Bukkit.getWorlds();
 			        	/** 
 			        	 *  World 0 = Overworld
@@ -244,7 +281,7 @@ public class Main extends JavaPlugin implements Listener{
 	    if(p.isOp() && UpdateCheck){	
 			try {
 			
-				URL url = new URL("https://raw.githubusercontent.com/JoelGodOfwar/PortalHelper/master/version.txt");
+				URL url = new URL("https://raw.githubusercontent.com/JoelGodOfwar/PortalHelper/master/versions/1.12/version.txt");
 				final URLConnection conn = url.openConnection();
 	            conn.setConnectTimeout(5000);
 	            final BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -266,6 +303,9 @@ public class Main extends JavaPlugin implements Listener{
 				e.printStackTrace();
 			}
 		}
+	    if(p.getDisplayName().equals("JoelYahwehOfWar")){
+	    	p.sendMessage(this.getName() + " " + this.getDescription().getVersion() + " Hello father!");
+	    }
 	}
     
     public boolean findPortal(Block block, Location loc1){
@@ -371,7 +411,7 @@ public class Main extends JavaPlugin implements Listener{
 	    		sender.sendMessage(ChatColor.GOLD + " /PH Link - Displays on screen if your current location");
 	    		sender.sendMessage(ChatColor.GOLD + "            will properly sync with a nether portal");
 			    sender.sendMessage(ChatColor.GOLD + " ");
-			    if(sender.isOp()||sender.hasPermission("ph.op")){
+			    if(sender.isOp()||sender.hasPermission("portalhelper.config")){
 			    	sender.sendMessage(ChatColor.GOLD + " OP Commands");				        
 			    	sender.sendMessage(ChatColor.GOLD + " /PH Update - Check for update.");//Check for update.");
 			    	sender.sendMessage(ChatColor.GOLD + " /PH Reload - Reload Config file." );//Reload config file.");
@@ -473,7 +513,7 @@ public class Main extends JavaPlugin implements Listener{
 	            Player player = null;
 	            if (sender instanceof Player) {
 	                player = (Player) sender;
-	                if (!player.hasPermission("portalhelper.config") && !player.isOp()) {
+	                if (!player.hasPermission("portalhelper.linkcommand") && !player.isOp()) {
 	                    player.sendMessage(ChatColor.DARK_RED + "You do not have permission for this command!");
 	                    return true;
 	                }
@@ -524,6 +564,13 @@ public class Main extends JavaPlugin implements Listener{
 	    }
 	    
 	    return true;
+	}
+    
+    public static String getVersion() {
+		String strVersion = Bukkit.getVersion();
+		strVersion = strVersion.substring(strVersion.indexOf("MC: "), strVersion.length());
+		strVersion = strVersion.replace("MC: ", "").replace(")", "");
+		return strVersion;
 	}
     
 }//The End
